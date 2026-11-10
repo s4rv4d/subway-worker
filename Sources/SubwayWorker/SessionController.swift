@@ -42,6 +42,7 @@ final class SessionController {
     /// The locked-in window's window-server number, for stacking the frame right under it.
     @ObservationIgnored private var targetWindowNumber: CGWindowID?
     @ObservationIgnored private var restackTask: Task<Void, Never>?
+    @ObservationIgnored private var backdropCheckTask: Task<Void, Never>?
     /// macOS refused to stack the frame under the window, so it's off for this session.
     @ObservationIgnored private var frameBlocked = false
     /// The locked-in app (or Subway Worker itself) is the frontmost app.
@@ -198,7 +199,7 @@ final class SessionController {
     /// every other window, but never the window itself (or the clip, which sits above).
     private func stackBackdrop() {
         guard let backdrop else { return }
-        guard isFrameOn, let number = targetWindowNumber, let screen,
+        guard isFrameOn, targetWindowNumber != nil, let screen,
               !targetAppHidden, !targetMinimized,
               model.switchAwayBehavior != .hide || targetInFront
         else {
@@ -213,23 +214,56 @@ final class SessionController {
         // With another app in front its windows already cover the frame, so leave it put,
         // unless it isn't on screen yet; then tuck it under the window wherever that is.
         if targetInFront || !backdrop.isVisible {
-            backdrop.order(.below, relativeTo: Int(number))
+            restack()
             checkBackdropSoon()
         }
+    }
+
+    /// Puts the wall directly under the locked-in window and the clip back above the wall.
+    /// Always both moves together: "directly under the app" lands the wall on top of the
+    /// clip whenever the app's window has been raised above the clip in the meantime.
+    private func restack() {
+        guard let backdrop, let number = targetWindowNumber else { return }
+        backdrop.order(.below, relativeTo: Int(number))
+        guard let panel, panel.isVisible else { return }
+        if targetInFront {
+            panel.orderFrontRegardless()
+        } else if panel.level == backdrop.level {
+            // Another app is in front: stay under its windows, just above the wall.
+            panel.order(.above, relativeTo: backdrop.windowNumber)
+        }
+    }
+
+    /// Safety net: whatever reordered our windows, the wall must never sit on top of the
+    /// clip. Runs when the clip stops being visible; only looks at our own two windows.
+    private func clipOcclusionChanged() {
+        guard isActive, let panel, let backdrop, panel.isVisible, backdrop.isVisible,
+              !panel.occlusionState.contains(.visible),
+              let order = NSWindow.windowNumbers(options: [])?.map(\.intValue),
+              let wallIndex = order.firstIndex(of: backdrop.windowNumber),
+              let clipIndex = order.firstIndex(of: panel.windowNumber),
+              wallIndex < clipIndex // front to back: the wall is in front of the clip
+        else { return }
+        restack()
     }
 
     /// Safety net: the frame must never cover the window. If macOS didn't let us stack it
     /// underneath (e.g. a permission was denied), take it away for the rest of the session.
     private func checkBackdropSoon() {
+        backdropCheckTask?.cancel()
         let generation = self.generation
-        Task {
-            try? await Task.sleep(for: .milliseconds(250))
-            guard generation == self.generation, isActive, targetInFront, !frameBlocked,
-                  let backdrop, backdrop.isVisible, let number = targetWindowNumber,
-                  !Self.isWindow(CGWindowID(backdrop.windowNumber), below: number)
-            else { return }
+        backdropCheckTask = Task {
+            // Two strikes: one bad reading can just be windows still settling after a switch.
+            for attempt in 1...2 {
+                try? await Task.sleep(for: .milliseconds(300))
+                guard !Task.isCancelled, generation == self.generation, isActive, targetInFront, !frameBlocked,
+                      let backdrop, backdrop.isVisible, let number = targetWindowNumber
+                else { return }
+                if Self.isWindow(CGWindowID(backdrop.windowNumber), below: number) { return }
+                if attempt == 1 { restack() }
+            }
             frameBlocked = true
-            backdrop.orderOut(nil)
+            backdrop?.orderOut(nil)
             relayout(moveWindow: model.keepSnapped) // drops the gap
         }
     }
@@ -369,7 +403,10 @@ final class SessionController {
     private func frontmostAppChanged(to pid: pid_t?) {
         guard isActive, let window else { return }
         let inFront = pid == window.pid || pid == ProcessInfo.processInfo.processIdentifier
-        guard inFront != targetInFront else { return }
+        // Coming to the app or to Subway Worker always restacks, even when "in front" didn't
+        // change: Mission Control, the Dock or ⌘-Tab can raise our windows out of order
+        // (e.g. the wall over the app, or the app over the clip's side of the wall).
+        guard inFront || targetInFront else { return }
         targetInFront = inFront
         updatePanelPresence()
         if inFront { restackSoon() }
@@ -407,6 +444,13 @@ final class SessionController {
             let panel = GameplayPanel(model: model)
             panel.onUserResize = { [weak self] frame in self?.panelResized(to: frame) }
             self.panel = panel
+            let center = NotificationCenter.default
+            let token = center.addObserver(
+                forName: NSWindow.didChangeOcclusionStateNotification, object: panel, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.clipOcclusionChanged() }
+            }
+            notificationTokens.append((center, token))
         }
         if backdrop == nil { backdrop = FrameBackdrop() }
     }
@@ -477,6 +521,8 @@ final class SessionController {
         model.playback.isSuspended = false
         restackTask?.cancel()
         restackTask = nil
+        backdropCheckTask?.cancel()
+        backdropCheckTask = nil
         targetWindowNumber = nil
         frameBlocked = false
         backdrop?.orderOut(nil)

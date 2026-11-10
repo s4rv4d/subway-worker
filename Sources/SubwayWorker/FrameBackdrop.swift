@@ -23,7 +23,9 @@ final class FrameBackdrop: NSPanel {
         isReleasedWhenClosed = false
         animationBehavior = .none
         isExcludedFromWindowsMenu = true
-        collectionBehavior = [.ignoresCycle, .fullScreenNone]
+        // .transient: Mission Control hides it instead of offering it as a window. Picking it
+        // there would raise the wall over the app and the clip.
+        collectionBehavior = [.transient, .ignoresCycle, .fullScreenNone]
     }
 
     var style: FrameStyle = .black {
