@@ -20,16 +20,24 @@ gameplay on the other. Lock in. 🚇
 
 ![The launcher and settings](docs/screenshots/app.jpg)
 
-## Run it
+## Install it
 
 ```bash
 git clone https://github.com/s4rv4d/subway-worker.git
 cd subway-worker
-make run
+make install
 ```
 
-Needs macOS 26 and Xcode 26 or later. On first launch, allow **Accessibility**. That's how it
-moves your windows around.
+Needs macOS 26 and Xcode 26 or later. No Apple developer account required.
+
+## Use it
+
+1. Open **Subway Worker** from Applications.
+2. First time only: click **Allow…** and switch it on under Accessibility. That's how it moves
+   your windows around.
+3. Pick an app, pick a clip, hit **Lock in**.
+
+Hover the clip for its controls. End the session, or quit, and your window goes back where it was.
 
 ![A doc on the right, the clip on the left](docs/screenshots/clip-left.jpg)
 
