@@ -2,6 +2,12 @@
   <img src="docs/banner.jpg" alt="Subway Worker">
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-26%2B-DB2F35?style=flat-square&logo=apple&logoColor=white&labelColor=19191B" alt="macOS 26 or later">
+  <img src="https://img.shields.io/badge/Xcode-26%2B-DB2F35?style=flat-square&logo=xcode&logoColor=white&labelColor=19191B" alt="Xcode 26 or later">
+  <img src="https://img.shields.io/badge/Swift-6.2-DB2F35?style=flat-square&logo=swift&logoColor=white&labelColor=19191B" alt="Swift 6.2">
+</p>
+
 <p align="center"><b>Your work on one side. An endless runner on the other. Your brain, finally quiet.</b></p>
 
 ![Xcode snapped next to the Rail Rush loop, framed by a brick wall](docs/screenshots/hero.jpg)
@@ -28,7 +34,7 @@ cd subway-worker
 make install
 ```
 
-Needs macOS 26 and Xcode 26 or later. No Apple developer account required.
+Needs **macOS 26** and **Xcode 26** or later. No Apple developer account required.
 
 ## Use it
 
@@ -61,3 +67,9 @@ clips for the real thing. Not affiliated with the game.
 **App Store?** Can't. Apps there aren't allowed to move other apps' windows.
 
 <sub>Set in Geist and Geist Mono by Vercel (SIL Open Font License).</sub>
+
+---
+
+<p align="center">
+  <b>Built for fun</b> by <a href="https://x.com/serverConnectd">s4rv4d</a>. Productivity not guaranteed.
+</p>
