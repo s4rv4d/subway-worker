@@ -1,4 +1,4 @@
-// Renders Resources/AppIcon.icns: a split screen — "work" on the left, a signal-yellow runner block on the right.
+// Renders Resources/AppIcon.icns: a split screen — "work" on the left, a signal-red runner block on the right.
 // Usage: swift scripts/make-icon.swift Resources/AppIcon.icns
 import AppKit
 
@@ -34,9 +34,9 @@ func render(size: CGFloat) -> NSBitmapImageRep {
                      xRadius: 15 * s, yRadius: 15 * s).fill()
     }
 
-    // Right: phone-shaped (9:16) signal-yellow block with a bold chevron.
+    // Right: phone-shaped (9:16) signal-red block with a bold chevron.
     let lane = NSRect(x: 549 * s, y: 232 * s, width: 315 * s, height: 560 * s)
-    hex(0xFCCC0A).setFill()
+    hex(0xDB2F35).setFill()
     NSBezierPath(roundedRect: lane, xRadius: 40 * s, yRadius: 40 * s).fill()
     let chevron = NSBezierPath()
     chevron.move(to: CGPoint(x: lane.midX - 90 * s, y: 468 * s))
@@ -45,7 +45,7 @@ func render(size: CGFloat) -> NSBitmapImageRep {
     chevron.lineWidth = 64 * s
     chevron.lineCapStyle = .round
     chevron.lineJoinStyle = .round
-    hex(0x111112).setStroke()
+    hex(0xFFFFFF).setStroke()
     chevron.stroke()
     NSGraphicsContext.restoreGraphicsState()
     return rep

@@ -526,7 +526,7 @@ private struct OptionRow<Content: View>: View {
     }
 }
 
-/// A to-scale miniature of the main display: the app in gray, the clip in yellow.
+/// A to-scale miniature of the main display: the app in gray, the clip in the accent colour.
 private struct LayoutDiagram: View {
     let model: AppModel
 

@@ -20,6 +20,11 @@ public final class PlaybackState {
     /// The last playback problem worth showing (unsupported file, empty folder, embed blocked…).
     /// Cleared when a new source starts playing successfully.
     public internal(set) var errorMessage: String?
+    /// A streamed clip stalled mid-playback for more than a moment (set by the player).
+    public internal(set) var isBuffering = false
+
+    /// Nothing is on screen yet, or playback has stalled: time for the loading skeleton.
+    public var isLoading: Bool { errorMessage == nil && (nowPlaying == nil || isBuffering) }
 
     /// Bumped by `skip()`. Folder playback advances to the next clip when it changes.
     public private(set) var skipRequests: Int = 0
@@ -34,6 +39,7 @@ public final class PlaybackState {
     public func resetStatus() {
         nowPlaying = nil
         errorMessage = nil
+        isBuffering = false
     }
 }
 
@@ -63,8 +69,19 @@ public struct ClipPlayerView: View {
             case .template:
                 Color.black
             }
+            if showsSkeleton {
+                // Covers the player (and YouTube's own spinner) until the clip really plays.
+                LoadingSkeleton(isAnimated: !state.isEffectivelyPaused)
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeOut(duration: 0.3), value: showsSkeleton)
         .clipped()
+    }
+
+    private var showsSkeleton: Bool {
+        if case .template = source { return false }
+        return state.isLoading
     }
 }
 

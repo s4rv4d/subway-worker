@@ -53,6 +53,7 @@ final class YouTubePlayerCoordinator: NSObject, WKNavigationDelegate {
     private let tracker = StateTracker()
     private var pageLoaded = false
     private var stopped = false
+    private var bufferingTask: Task<Void, Never>?
 
     init(link: YouTubeLink, state: PlaybackState) {
         self.link = link
@@ -97,6 +98,8 @@ final class YouTubePlayerCoordinator: NSObject, WKNavigationDelegate {
         guard !stopped else { return }
         stopped = true
         tracker.stop()
+        bufferingTask?.cancel()
+        bufferingTask = nil
         guard let webView else { return }
         webView.configuration.userContentController.removeScriptMessageHandler(forName: Self.handlerName)
         webView.navigationDelegate = nil
@@ -111,14 +114,36 @@ final class YouTubePlayerCoordinator: NSObject, WKNavigationDelegate {
         switch type {
         case "playing":
             let title = (dict["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            setBuffering(false)
             state.nowPlaying = (title?.isEmpty == false) ? title : "YouTube"
             state.errorMessage = nil
+        case "buffering":
+            setBuffering(true)
+        case "paused":
+            setBuffering(false)
         case "error":
             let code = (dict["code"] as? Int) ?? Int((dict["code"] as? Double) ?? -1)
+            setBuffering(false)
             state.nowPlaying = nil
             state.errorMessage = Self.message(forErrorCode: code)
         default:
             break
+        }
+    }
+
+    /// Stalls only count once they last: the loop's own seek back to the start buffers for
+    /// an instant every time round, and that must not flash the loading skeleton.
+    private func setBuffering(_ buffering: Bool) {
+        bufferingTask?.cancel()
+        bufferingTask = nil
+        guard buffering else {
+            state.isBuffering = false
+            return
+        }
+        bufferingTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard let self, !Task.isCancelled, !self.stopped else { return }
+            self.state.isBuffering = true
         }
     }
 
@@ -242,6 +267,10 @@ final class YouTubePlayerCoordinator: NSObject, WKNavigationDelegate {
                 var title = '';
                 try { title = player.getVideoData().title || ''; } catch (err) {}
                 post({ type: 'playing', title: title });
+              } else if (e.data === YT.PlayerState.BUFFERING) {
+                post({ type: 'buffering' });
+              } else if (e.data === YT.PlayerState.PAUSED) {
+                post({ type: 'paused' });
               }
             },
             onError: function (e) { post({ type: 'error', code: e.data }); }

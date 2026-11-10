@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Subway Worker's look: a warm near-black, off-white type and one signal-yellow accent
+/// Subway Worker's look: a warm near-black, off-white type and one signal-red accent
 /// (the colour of a subway line bullet). Geist for text, Geist Mono for labels and numbers.
 enum Theme {
     static let background = Color(hex: 0x0F0F10)
@@ -11,9 +11,10 @@ enum Theme {
     static let text = Color(hex: 0xEEECE7)
     static let secondaryText = Color(hex: 0x8F8D88)
     static let tertiaryText = Color(hex: 0x5E5D59)
-    static let accent = Color(hex: 0xFCCC0A)
-    static let onAccent = Color(hex: 0x111112)
-    static let danger = Color(hex: 0xFF6B5E)
+    static let accent = Color(hex: 0xDB2F35)
+    static let onAccent = Color(hex: 0xFFFFFF)
+    /// Problems are amber, so they never look like the (red) selection colour.
+    static let danger = Color(hex: 0xF2A93B)
 
     static let radius: CGFloat = 10
 }
